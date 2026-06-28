@@ -173,14 +173,16 @@ def generate_question_by_theme(theme: str) -> GeneratedQuestion:
         return _fallback_question_by_theme(theme)
 
     prompt = (
-        f'Generate a fun "would you rather" or preference question about the theme: {theme}.\n'
-        'Return JSON: {"text": "...", "option_a": "...", "option_b": "...", "emoji_a": "...", "emoji_b": "..."}\n'
-        "All text in Ukrainian language."
+        f'Ти генератор питань для гри. Тема: "{theme}".\n'
+        'Придумай цікаве питання у форматі "що б ти обрав?" або "що краще?".\n'
+        'ОБОВ\'ЯЗКОВО: весь текст тільки українською мовою.\n'
+        'Поверни ТІЛЬКИ JSON без пояснень:\n'
+        '{"text": "питання?", "option_a": "варіант А", "option_b": "варіант Б", "emoji_a": "emoji", "emoji_b": "emoji"}'
     )
     try:
         client = Groq(api_key=settings.groq_api_key)
         response = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama3-70b-8192",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.9,
             max_tokens=256,
