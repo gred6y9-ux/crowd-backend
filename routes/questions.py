@@ -34,6 +34,22 @@ class PlayerStatusResponse(BaseModel):
     accuracy: float
 
 
+@router.get("/generate")
+async def generate_question_by_theme_endpoint(theme: str = "food"):
+    """Generate a question by theme using AI (no auth required)."""
+    from services.ai_generator import generate_question_by_theme
+    question = generate_question_by_theme(theme)
+    return {
+        "text": question.text,
+        "option_a": question.option_a,
+        "option_b": question.option_b,
+        "emoji_a": question.emoji_a,
+        "emoji_b": question.emoji_b,
+        "votes_a": 0,
+        "votes_b": 0,
+    }
+
+
 @router.get("/today", response_model=PlayerStatusResponse)
 async def get_today_question(device_id: str, db: AsyncSession = Depends(get_db)):
     today = datetime.now(timezone.utc).date()

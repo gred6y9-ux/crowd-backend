@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from database import Base, engine
 from routes.admin import router as admin_router
+from routes.battle import router as battle_router
 from routes.leaderboard import router as leaderboard_router
 from routes.questions import router as questions_router
 from routes.votes import router as votes_router
@@ -44,6 +45,7 @@ app.include_router(questions_router)
 app.include_router(votes_router)
 app.include_router(leaderboard_router)
 app.include_router(admin_router)
+app.include_router(battle_router)
 
 
 @app.get("/health")

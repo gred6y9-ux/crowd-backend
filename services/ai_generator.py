@@ -136,6 +136,66 @@ def _fallback_question() -> GeneratedQuestion:
     return GeneratedQuestion(**raw)
 
 
+_THEME_KEYWORDS: dict[str, list[str]] = {
+    "food": ["pizza", "burger", "sushi", "tacos", "pancakes", "waffles", "chocolate", "vanilla", "spicy", "sweet", "cook", "eat"],
+    "nature": ["mountains", "beach", "rain", "sunshine", "summer", "winter", "spring", "autumn", "pool", "ocean"],
+    "animals": ["cat", "dog", "cats", "dogs"],
+    "travel": ["camping", "hotel", "travel", "window", "aisle", "city", "countryside"],
+    "tech": ["internet", "battery", "headphones", "speakers", "phone", "e-reader"],
+    "habits": ["morning", "evening", "shower", "workout", "gym", "sleep", "nap", "coffee", "tea"],
+}
+
+_THEME_FALLBACKS: dict[str, list[str]] = {
+    "food": ["Pizza or burger?", "Sushi or tacos?", "Pancakes or waffles?", "Chocolate or vanilla?", "Spicy or mild food?", "Sweet or salty?", "Cook at home or eat out?", "Dessert before or after meal?"],
+}
+
+
+def _fallback_question_by_theme(theme: str) -> GeneratedQuestion:
+    theme_lower = theme.lower()
+    # Find matching questions by keyword
+    matched = []
+    for keyword_theme, keywords in _THEME_KEYWORDS.items():
+        if theme_lower in keyword_theme or keyword_theme in theme_lower or any(k in theme_lower for k in keywords):
+            for q in FALLBACK_QUESTIONS:
+                text_lower = q["text"].lower()
+                opt_lower = (q["option_a"] + " " + q["option_b"]).lower()
+                if any(k in text_lower or k in opt_lower for k in keywords):
+                    matched.append(q)
+    if matched:
+        return GeneratedQuestion(**random.choice(matched))
+    return _fallback_question()
+
+
+def generate_question_by_theme(theme: str) -> GeneratedQuestion:
+    """Generate a question on a specific theme via Groq, falling back to hardcoded list."""
+    if not getattr(settings, "groq_api_key", None):
+        logger.warning("GROQ_API_KEY not set — using fallback question for theme: %s", theme)
+        return _fallback_question_by_theme(theme)
+
+    prompt = (
+        f'Generate a fun "would you rather" or preference question about the theme: {theme}.\n'
+        'Return JSON: {"text": "...", "option_a": "...", "option_b": "...", "emoji_a": "...", "emoji_b": "..."}\n'
+        "All text in Ukrainian language."
+    )
+    try:
+        client = Groq(api_key=settings.groq_api_key)
+        response = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.9,
+            max_tokens=256,
+            response_format={"type": "json_object"},
+        )
+        raw_content = response.choices[0].message.content
+        data: dict[str, Any] = json.loads(raw_content)
+        question = GeneratedQuestion(**data)
+        logger.info("Groq generated themed question (%s): %s", theme, question.text)
+        return question
+    except Exception as exc:
+        logger.error("Groq themed generation failed (%s) — using fallback", exc)
+        return _fallback_question_by_theme(theme)
+
+
 def generate_daily_question() -> GeneratedQuestion:
     """Generate today's question via Groq, falling back to hardcoded list."""
     if not getattr(settings, "groq_api_key", None):
